@@ -113,7 +113,7 @@ def simulate(params):
 
 
 def base_params(values):
-	names = ["periods", "dt", "K0", "L0", "Pop0", "q0", "alk0", "E", "zeta", "theta", "gamma", "gamma_E", "gamma0", "R", "n", "a", "b", "GovSp", "m0", "eta", "x0", "kappa", "Pq", "Pk"]
+	names = ["periods", "dt", "K0", "L0", "Pop0", "q0", "alk0", "E", "zeta", "gamma", "gamma_E", "gamma0", "R", "n", "a", "b", "GovSp", "m0", "eta", "x0", "kappa", "Pq", "Pk"]
 	params = {name: values[name] for name in names}
 	params["KLR0"] = params["K0"] / params["L0"]
 	params["alpha0"] = np.clip(
@@ -129,20 +129,17 @@ def scenario_inputs(label, key_prefix):
 	periods = st.number_input("Horyzont symulacji", 5, 200, 40, key=f"{key_prefix}_periods")
 	K0 = st.number_input("Kapitał K₀", 1.0, 1_000_000.0, 100.0, key=f"{key_prefix}_K0")
 	L0 = st.number_input("Praca L₀", 1.0, 1_000_000.0, 100.0, key=f"{key_prefix}_L0")
-	Pop0 = st.number_input("Populacja Pop₀", 1.0, 10_000_000.0, 120.0, key=f"{key_prefix}_Pop0")
+	Pop0 = st.number_input("Populacja Pop₀", 1.0, 10_000_000.0, 108.0, key=f"{key_prefix}_Pop0_v2")
 	q0 = st.number_input("Produkcja bazowa q₀", 1.0, 1_000_000.0, 100.0, key=f"{key_prefix}_q0")
-	alk0 = st.number_input("Średni okres użytkowania alk₀", 1.0, 100.0, 20.0, key=f"{key_prefix}_alk0")
+	alk0 = st.number_input("Średni okres użytkowania alk₀", 1.0, 100.0, 10.0, key=f"{key_prefix}_alk0_v2")
 	st.metric("Bazowe KLR₀ = K₀ / L₀", f"{K0 / L0:.4f}")
 	st.subheader("Technologia i dynamika")
 	if f"{key_prefix}_E" in st.session_state and not 0 < st.session_state[f"{key_prefix}_E"] <= 1:
 		st.session_state[f"{key_prefix}_E"] = 1.0
 	if f"{key_prefix}_zeta" in st.session_state and st.session_state[f"{key_prefix}_zeta"] <= 0:
 		st.session_state[f"{key_prefix}_zeta"] = 0.10
-	if f"{key_prefix}_theta" in st.session_state and st.session_state[f"{key_prefix}_theta"] <= 0:
-		st.session_state[f"{key_prefix}_theta"] = 0.10
 	E = st.slider("Czynnik środowiskowy E", 0.01, 1.0, 1.0, 0.01, key=f"{key_prefix}_E")
 	zeta = st.number_input("ζ", 0.01, 5.0, 1.0, 0.1, key=f"{key_prefix}_zeta")
-	theta = st.number_input("θ", 0.01, 5.0, 1.0, 0.1, key=f"{key_prefix}_theta")
 	gamma = st.number_input("γ", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma")
 	gamma_E = st.number_input("γ_E", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma_E")
 	gamma0 = st.number_input("γ₀", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma0")
@@ -163,7 +160,7 @@ def scenario_inputs(label, key_prefix):
 	return {
 		"periods": periods, "dt": 0.01, "K0": K0, "L0": L0, "Pop0": Pop0,
 		"q0": q0, "alk0": alk0, "E": E, "zeta": zeta,
-		"theta": theta, "gamma": gamma, "R": R, "n": n, "a": a, "b": b, "gamma_E": gamma_E, "gamma0": gamma0,
+		"gamma": gamma, "R": R, "n": n, "a": a, "b": b, "gamma_E": gamma_E, "gamma0": gamma0,
 		"GovSp": GovSp, "m0": m0, "eta": eta, "x0": x0, "kappa": kappa,
 		"Pq": Pq, "Pk": Pk,
 	}
@@ -177,19 +174,19 @@ with st.sidebar:
 	st.caption("Krok obliczeń: dt = 0.01")
 	st.session_state["scenario_a_E"] = 1.0
 	st.session_state["scenario_a_zeta"] = 1.0
-	st.session_state["scenario_a_theta"] = 1.0
 	with st.expander("Scenariusz A", expanded=True):
 		values = scenario_inputs("Parametry scenariusza A", "scenario_a")
 	compare_scenarios = st.checkbox("Pokaż scenariusz B na wspólnych wykresach", value=True)
 	if compare_scenarios:
 		with st.expander("Scenariusz B", expanded=True):
-			st.caption("Scenariusz B dziedziczy wszystkie parametry A poza E, ζ i θ.")
+			st.caption("Scenariusz B dziedziczy parametry A z możliwością zmiany E, ζ, γ₀ i γ_E.")
 			values_b = dict(values)
 			if "scenario_b_E" in st.session_state and not 0 < st.session_state["scenario_b_E"] < 1:
 				st.session_state["scenario_b_E"] = 0.70
 			values_b["E"] = st.slider("Czynnik środowiskowy E", 0.01, 0.99, 0.70, 0.01, key="scenario_b_E")
 			values_b["zeta"] = st.number_input("ζ", 0.01, 5.0, 1.2, 0.1, key="scenario_b_zeta")
-			values_b["theta"] = st.number_input("θ", 0.01, 5.0, 2.0, 0.1, key="scenario_b_theta")
+			values_b["gamma0"] = st.number_input("γ₀", -5.0, 5.0, 0.25, 0.05, key="scenario_b_gamma0")
+			values_b["gamma_E"] = st.number_input("γ_E", -5.0, 5.0, 0.25, 0.05, key="scenario_b_gamma_E")
 		with st.expander("Scenariusz C", expanded=True):
 			st.caption("C pokazuje korzystny wariant: niższe E i ujemne ζ zwiększają poziom produkcji.")
 			values_c = dict(values)
@@ -198,10 +195,9 @@ with st.sidebar:
 			values_c["E"] = st.slider("Czynnik środowiskowy E", 0.01, 0.99, 0.85, 0.01, key="scenario_c_E")
 			if "scenario_c_zeta" in st.session_state and st.session_state["scenario_c_zeta"] <= 0:
 				st.session_state["scenario_c_zeta"] = 2.0
-			if "scenario_c_theta" in st.session_state and st.session_state["scenario_c_theta"] <= 0:
-				st.session_state["scenario_c_theta"] = 2.5
 			values_c["zeta"] = st.number_input("ζ", 0.01, 5.0, 2.0, 0.1, key="scenario_c_zeta")
-			values_c["theta"] = st.number_input("θ", 0.01, 5.0, 2.5, 0.1, key="scenario_c_theta")
+			values_c["gamma0"] = st.number_input("γ₀", -5.0, 5.0, 0.25, 0.05, key="scenario_c_gamma0")
+			values_c["gamma_E"] = st.number_input("γ_E", -5.0, 5.0, 0.25, 0.05, key="scenario_c_gamma_E")
 	else:
 		values_b = None
 		values_c = None
@@ -283,12 +279,13 @@ with tab3:
 with tab4:
 	st.subheader("Analiza wrażliwości")
 	st.write("Każdy wykres zmienia jeden parametr względem scenariusza A, a pozostałe parametry pozostają stałe.")
-	st.info("Wariant bazowy: A = E 1.0, ζ 1.0, θ 1.0. Warianty B i C pokazują odchylenia od tej bazy.")
+	st.info("Wariant bazowy: A = E 1.0, ζ 1.0, γ₀ 0.25, γ_E 0.25. Warianty B i C pokazują odchylenia od tej bazy.")
 
 	sensitivity_specs = [
 		("E", [0.10, 0.25, 0.40, 0.70, 0.85, 1.0], "Czynnik środowiskowy E"),
 		("zeta", [0.1, 0.5, 1.0, 1.5, 2.0, 2.5], "Parametr ζ"),
-		("theta", [0.1, 0.5, 1.0, 1.5, 2.0, 2.5], "Parametr θ"),
+		("gamma0", [-1.0, -0.5, 0.0, 0.25, 0.5, 1.0], "Parametr γ₀"),
+		("gamma_E", [-1.0, -0.5, 0.0, 0.25, 0.5, 1.0], "Parametr γ_E"),
 	]
 
 	comparison_rows = []
@@ -297,7 +294,8 @@ with tab4:
 			"Scenariusz": scenario_name,
 			"E": values["E"] if scenario_name == "Scenariusz A" else (values_b if scenario_name == "Scenariusz B" else values_c)["E"],
 			"ζ": values["zeta"] if scenario_name == "Scenariusz A" else (values_b if scenario_name == "Scenariusz B" else values_c)["zeta"],
-			"θ": values["theta"] if scenario_name == "Scenariusz A" else (values_b if scenario_name == "Scenariusz B" else values_c)["theta"],
+			"γ₀": values["gamma0"] if scenario_name == "Scenariusz A" else (values_b if scenario_name == "Scenariusz B" else values_c)["gamma0"],
+			"γ_E": values["gamma_E"] if scenario_name == "Scenariusz A" else (values_b if scenario_name == "Scenariusz B" else values_c)["gamma_E"],
 			"Produkcja końcowa": frame["Produkcja q"].iloc[-1],
 			"Kapitał końcowy": frame["Kapitał K"].iloc[-1],
 			"Suma zysku": frame["Zysk pi"].sum(),
@@ -340,7 +338,7 @@ with tab5:
 	st.markdown("""
 Model wyznacza początkowy udział kapitału ze wzoru **α₀ = KOR₀ · (1/alk₀ + R)**, a następnie aktualizuje go regułą **αₙ₊₁ = KORₙ · (1/alkₙ + R)**. Wartość α jest ograniczana do przedziału (0, 1) wyłącznie dla stabilności numerycznej.
 
-	- `alk₀` jest wartością początkową i zawsze zachodzi `alk(0) = alk₀`, niezależnie od `E` i `θ`.
+	- `alk₀` jest wartością początkową i zawsze zachodzi `alk(0) = alk₀`, niezależnie od `E`.
 	- Stałe E i ζ wpływają na poziom q, ale nie dodają bezpośredniego składnika do stopy wzrostu.
 	- `alk` wykorzystuje KLR z poprzedniego kroku, co zapobiega sprzężeniu algebraicznemu.
 	- Popyt planowany opiera się na `Iᵖ = max(b · ΔC, 0)`, a inwestycja faktyczna jest korygowana tak, aby `Pq · q = C + I + G + X − M`; kapitał przechodzi dalej zgodnie z `Kₙ₊₁ = Kₙ + dt · (Iₙ/Pq − Kₙ/alkₙ)`.
