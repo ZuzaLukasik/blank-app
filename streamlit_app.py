@@ -49,15 +49,13 @@ def simulate(params):
 		)
 		kor[t] = capital[t] / max(output[t], 1e-12)
 		wage[t] = beta[t] * output[t] / max(labor[t], 1e-12)
-		if t == 0:
-			alk[t] = params["alk0"]
-		else:
-			alk[t] = params["alk0"] * np.exp(
-				(
-					-params["gamma0"]
-					- params["gamma_E"] * (1 - params["E"])
-				)
-				* (klr[t - 1] / params["KLR0"] - 1)
+		previous_klr = params["KLR0"] if t == 0 else klr[t - 1]
+		alk[t] = params["alk0"] * np.exp(
+			(
+				-params["gamma0"]
+				- params["gamma_E"] * (1 - params["E"])
+			)
+			* (previous_klr / params["KLR0"] - 1)
 			)
 		klr[t] = alpha[t] * wage[t] / max((1 / alk[t] + params["R"]) * beta[t], 1e-12)
 
@@ -109,8 +107,9 @@ def base_params(values):
 	names = ["periods", "dt", "K0", "L0", "Pop0", "q0", "alk0", "E", "zeta", "gamma", "gamma_E", "gamma0", "R", "n", "a", "b", "GovSp", "m0", "eta", "x0", "kappa", "Pq", "Pk"]
 	params = {name: values[name] for name in names}
 	params["KLR0"] = params["K0"] / params["L0"]
+	initial_output = params["q0"] * params["E"] ** params["zeta"]
 	params["alpha0"] = np.clip(
-		(params["K0"] / params["q0"]) * (1 / params["alk0"] + params["R"]),
+		(params["K0"] / initial_output) * (1 / params["alk0"] + params["R"]),
 		0.02,
 		0.98,
 	)
@@ -137,7 +136,8 @@ def scenario_inputs(label, key_prefix):
 	gamma_E = st.number_input("γ_E", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma_E")
 	gamma0 = st.number_input("γ₀", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma0")
 	R = st.slider("R", -0.05, 0.50, 0.05, 0.01, key=f"{key_prefix}_R")
-	alpha0 = np.clip((K0 / q0) * (1 / alk0 + R), 0.02, 0.98)
+	initial_output = q0 * E ** zeta
+	alpha0 = np.clip((K0 / initial_output) * (1 / alk0 + R), 0.02, 0.98)
 	st.caption(f"α₀ jest wyliczane ze wzoru i nie można go ustawić ręcznie: α₀ = {alpha0:.4f}")
 	n = st.slider("Tempo wzrostu populacji n", -0.05, 0.10, 0.02, 0.005, key=f"{key_prefix}_n")
 	st.subheader("Popyt i handel")
