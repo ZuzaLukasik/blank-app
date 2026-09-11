@@ -49,14 +49,23 @@ def simulate(params):
 		)
 		kor[t] = capital[t] / max(output[t], 1e-12)
 		wage[t] = beta[t] * output[t] / max(labor[t], 1e-12)
-		previous_klr = params["KLR0"] if t == 0 else klr[t - 1]
-		alk[t] = params["alk0"] * np.exp(
-			(
-				-params["gamma0"]
-				- params["gamma_E"] * (1 - params["E"])
-			)
-			* (previous_klr / params["KLR0"] - 1)
-			)
+		if t == 0:
+			alk[t] = params["alk0"]
+		else:
+			alk[t] = alk[t - 1]
+			for _ in range(100):
+				klr[t] = alpha[t] * wage[t] / max((1 / alk[t] + params["R"]) * beta[t], 1e-12)
+				updated_alk = params["alk0"] * np.exp(
+					(
+						-params["gamma0"]
+						- params["gamma_E"] * (1 - params["E"])
+					)
+					* (klr[t] / params["KLR0"] - 1)
+				)
+				if np.isclose(updated_alk, alk[t], rtol=1e-10, atol=1e-12):
+					alk[t] = updated_alk
+					break
+				alk[t] = updated_alk
 		klr[t] = alpha[t] * wage[t] / max((1 / alk[t] + params["R"]) * beta[t], 1e-12)
 
 		consumption[t] = params["a"] * params["Pq"] * output[t]
@@ -107,9 +116,8 @@ def base_params(values):
 	names = ["periods", "dt", "K0", "L0", "Pop0", "q0", "alk0", "E", "zeta", "gamma", "gamma_E", "gamma0", "R", "n", "a", "b", "GovSp", "m0", "eta", "x0", "kappa", "Pq", "Pk"]
 	params = {name: values[name] for name in names}
 	params["KLR0"] = params["K0"] / params["L0"]
-	initial_output = params["q0"] * params["E"] ** params["zeta"]
 	params["alpha0"] = np.clip(
-		(params["K0"] / initial_output) * (1 / params["alk0"] + params["R"]),
+		(params["K0"] / params["q0"]) * (1 / params["alk0"] + params["R"]),
 		0.02,
 		0.98,
 	)
@@ -136,8 +144,7 @@ def scenario_inputs(label, key_prefix):
 	gamma_E = st.number_input("γ_E", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma_E")
 	gamma0 = st.number_input("γ₀", -5.0, 5.0, 0.25, 0.05, key=f"{key_prefix}_gamma0")
 	R = st.slider("R", -0.05, 0.50, 0.05, 0.01, key=f"{key_prefix}_R")
-	initial_output = q0 * E ** zeta
-	alpha0 = np.clip((K0 / initial_output) * (1 / alk0 + R), 0.02, 0.98)
+	alpha0 = np.clip((K0 / q0) * (1 / alk0 + R), 0.02, 0.98)
 	st.caption(f"α₀ jest wyliczane ze wzoru i nie można go ustawić ręcznie: α₀ = {alpha0:.4f}")
 	n = st.slider("Tempo wzrostu populacji n", -0.05, 0.10, 0.02, 0.005, key=f"{key_prefix}_n")
 	st.subheader("Popyt i handel")
@@ -350,7 +357,7 @@ with tab6:
 
 	st.markdown("#### Produkcja i technologia")
 	st.latex(r"q_n = q_0 \cdot E^{\zeta} \cdot \left(\frac{K_n}{K_0}\right)^{\alpha_n} \cdot \left(\frac{L_n}{L_0}\right)^{\beta_n}")
-	st.latex(r"alk_n = alk_0 \cdot e^{-[\gamma_0 + \gamma_E(1-E)]\left(\frac{KLR_{n-1}}{KLR_0} - 1\right)} \quad (n > 0)")
+	st.latex(r"alk_n = alk_0 \cdot e^{[\gamma_0 - \gamma_E(1-E)]\left(\frac{KLR_n}{KLR_0} - 1\right)} \quad (n > 0)")
 	st.latex(r"alk_0 = alk_0")
 	st.latex(r"KOR_n = \frac{K_n}{q_n}")
 	st.latex(r"rw_n = \frac{\beta_n q_n}{L_n}")
