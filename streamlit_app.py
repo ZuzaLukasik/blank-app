@@ -52,20 +52,13 @@ def simulate(params):
 		if t == 0:
 			alk[t] = params["alk0"]
 		else:
-			alk[t] = alk[t - 1]
-			for _ in range(100):
-				klr[t] = alpha[t] * wage[t] / max((1 / alk[t] + params["R"]) * beta[t], 1e-12)
-				updated_alk = params["alk0"] * np.exp(
-					(
-						-params["gamma0"]
-						- params["gamma_E"] * (1 - params["E"])
-					)
-					* (klr[t] / params["KLR0"] - 1)
+			alk[t] = params["alk0"] * np.exp(
+				(
+					-params["gamma0"]
+					- params["gamma_E"] * (1 - params["E"])
 				)
-				if np.isclose(updated_alk, alk[t], rtol=1e-10, atol=1e-12):
-					alk[t] = updated_alk
-					break
-				alk[t] = updated_alk
+				* (klr[t - 1] / params["KLR0"] - 1)
+			)
 		klr[t] = alpha[t] * wage[t] / max((1 / alk[t] + params["R"]) * beta[t], 1e-12)
 
 		consumption[t] = params["a"] * params["Pq"] * output[t]
@@ -357,7 +350,7 @@ with tab6:
 
 	st.markdown("#### Produkcja i technologia")
 	st.latex(r"q_n = q_0 \cdot E^{\zeta} \cdot \left(\frac{K_n}{K_0}\right)^{\alpha_n} \cdot \left(\frac{L_n}{L_0}\right)^{\beta_n}")
-	st.latex(r"alk_n = alk_0 \cdot e^{[\gamma_0 - \gamma_E(1-E)]\left(\frac{KLR_n}{KLR_0} - 1\right)} \quad (n > 0)")
+	st.latex(r"alk_n = alk_0 \cdot e^{-[\gamma_0 + \gamma_E(1-E)]\left(\frac{KLR_{n-1}}{KLR_0} - 1\right)} \quad (n > 0)")
 	st.latex(r"alk_0 = alk_0")
 	st.latex(r"KOR_n = \frac{K_n}{q_n}")
 	st.latex(r"rw_n = \frac{\beta_n q_n}{L_n}")
